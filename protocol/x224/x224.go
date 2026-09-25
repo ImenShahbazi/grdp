@@ -284,8 +284,12 @@ func (x *X224) recvConnectionConfirm(s []byte) {
 		x.selectedProtocol = PROTOCOL_RDP
 	}
 
-	if x.selectedProtocol == PROTOCOL_HYBRID_EX {
-		err := fmt.Errorf("NODE_RDP_PROTOCOL_HYBRID_EX_NOT_SUPPORTED")
+	// ✅ چک: اگر سرور NLA را انتخاب نکرد، خطا بده
+	if x.selectedProtocol != PROTOCOL_HYBRID && x.selectedProtocol != PROTOCOL_HYBRID_EX {
+		err := &core.RDPError{
+			Kind:    core.ErrKindProtocol,
+			Message: fmt.Sprintf("NLA not supported by server (selected protocol: 0x%x)", x.selectedProtocol),
+		}
 		glog.Error(err)
 		x.Emit("error", err)
 		x.Close()
@@ -294,18 +298,13 @@ func (x *X224) recvConnectionConfirm(s []byte) {
 
 	x.transport.On("data", x.recvData)
 
-	if x.selectedProtocol == PROTOCOL_RDP {
-		glog.Info("*** RDP security selected ***")
-		x.Emit("connect", x.selectedProtocol)
-		return
-	}
-
-	if x.selectedProtocol == PROTOCOL_SSL {
-		glog.Info("*** SSL security selected ***")
-		err := x.transport.(*tpkt.TPKT).StartTLS()
+	// ✅ حالا فقط دو حالت ممکن است: HYBRID یا HYBRID_EX
+	if x.selectedProtocol == PROTOCOL_HYBRID {
+		glog.Info("*** NLA Security selected ***")
+		err := x.transport.(*tpkt.TPKT).StartNLA()
 		if err != nil {
-			glog.Error("start tls failed:", err)
-			x.Emit("error", &core.RDPError{Kind: core.ErrKindTLS, Message: "TLS handshake failed", Wrapped: err})
+			glog.Error("start NLA failed:", err)
+			x.Emit("error", &core.RDPError{Kind: core.ErrKindAuth, Message: "NLA authentication failed", Wrapped: err})
 			x.Close()
 			return
 		}
@@ -313,8 +312,8 @@ func (x *X224) recvConnectionConfirm(s []byte) {
 		return
 	}
 
-	if x.selectedProtocol == PROTOCOL_HYBRID {
-		glog.Info("*** NLA Security selected ***")
+	if x.selectedProtocol == PROTOCOL_HYBRID_EX {
+		glog.Info("*** NLA Security (Extended) selected ***")
 		err := x.transport.(*tpkt.TPKT).StartNLA()
 		if err != nil {
 			glog.Error("start NLA failed:", err)
