@@ -12,9 +12,40 @@ type ReadBytesComplete func(result []byte, err error)
 // result. If ctx is cancelled before the read completes, the callback is not
 // invoked, preventing work on a dead connection.
 func StartReadBytes(ctx context.Context, len int, r io.Reader, cb ReadBytesComplete) {
+	// ✅ چک کردن context قبل از هر کاری
+	select {
+	case <-ctx.Done():
+		return
+	default:
+	}
+
+	// ✅ جلوگیری از panic در صورت len منفی
+	if len < 0 {
+		cb(nil, fmt.Errorf("StartReadBytes: invalid negative length %d", len))
+		return
+	}
+
+	// ✅ محدود کردن حداکثر اندازه برای جلوگیری از مصرف بی‌رویه حافظه
+	// 16MB برای Fast-Path و Slow-Path کافی است
+	const maxReadSize = 16 * 1024 * 1024
+	if len > maxReadSize {
+		cb(nil, fmt.Errorf("StartReadBytes: length %d exceeds max %d", len, maxReadSize))
+		return
+	}
+
+	// ✅ len == 0 هم مشکل‌ساز است، مستقیماً برگردان
+	if len == 0 {
+		cb([]byte{}, nil)
+		return
+	}
+
+	// ✅ ساخت بافر امن
 	b := make([]byte, len)
+
 	go func() {
 		_, err := io.ReadFull(r, b)
+
+		// ✅ چک کردن context بعد از خواندن
 		select {
 		case <-ctx.Done():
 			return
