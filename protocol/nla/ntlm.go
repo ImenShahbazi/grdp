@@ -158,36 +158,47 @@ func (m *ChallengeMessage) BaseLen() uint32 {
 	return 56
 }
 
-func (m *ChallengeMessage) getTargetInfo() []byte {
+func (m *ChallengeMessage) getTargetInfo() (result []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = make([]byte, 0)
+		}
+	}()
+
 	if m.TargetInfoLen == 0 {
 		return make([]byte, 0)
 	}
-	offset := m.BaseLen()
-	// محافظت در برابر offset خراب یا کوچک‌تر از BaseLen
-	if m.TargetInfoBufferOffset < offset {
+	offset := uint64(m.BaseLen())
+	bufOffset := uint64(m.TargetInfoBufferOffset)
+	if bufOffset < offset {
 		return make([]byte, 0)
 	}
-	start := m.TargetInfoBufferOffset - offset
-	end := start + uint32(m.TargetInfoLen)
-	// محافظت در برابر end بزرگ‌تر از طول Payload
-	if end > uint32(len(m.Payload)) || start >= uint32(len(m.Payload)) {
+	start := bufOffset - offset
+	end := start + uint64(m.TargetInfoLen)
+	if end > uint64(len(m.Payload)) || start > end {
 		return make([]byte, 0)
 	}
 	return m.Payload[start:end]
 }
-func (m *ChallengeMessage) getTargetName() []byte {
+
+func (m *ChallengeMessage) getTargetName() (result []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = make([]byte, 0)
+		}
+	}()
+
 	if m.TargetNameLen == 0 {
 		return make([]byte, 0)
 	}
-	offset := m.BaseLen()
-	// محافظت در برابر offset خراب یا کوچک‌تر از BaseLen
-	if m.TargetNameBufferOffset < offset {
+	offset := uint64(m.BaseLen())
+	bufOffset := uint64(m.TargetNameBufferOffset)
+	if bufOffset < offset {
 		return make([]byte, 0)
 	}
-	start := m.TargetNameBufferOffset - offset
-	end := start + uint32(m.TargetNameLen)
-	// محافظت در برابر end بزرگ‌تر از طول Payload
-	if end > uint32(len(m.Payload)) || start >= uint32(len(m.Payload)) {
+	start := bufOffset - offset
+	end := start + uint64(m.TargetNameLen)
+	if end > uint64(len(m.Payload)) || start > end {
 		return make([]byte, 0)
 	}
 	return m.Payload[start:end]
