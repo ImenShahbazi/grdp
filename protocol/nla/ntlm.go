@@ -163,16 +163,34 @@ func (m *ChallengeMessage) getTargetInfo() []byte {
 		return make([]byte, 0)
 	}
 	offset := m.BaseLen()
+	// محافظت در برابر offset خراب یا کوچک‌تر از BaseLen
+	if m.TargetInfoBufferOffset < offset {
+		return make([]byte, 0)
+	}
 	start := m.TargetInfoBufferOffset - offset
-	return m.Payload[start : start+uint32(m.TargetInfoLen)]
+	end := start + uint32(m.TargetInfoLen)
+	// محافظت در برابر end بزرگ‌تر از طول Payload
+	if end > uint32(len(m.Payload)) || start >= uint32(len(m.Payload)) {
+		return make([]byte, 0)
+	}
+	return m.Payload[start:end]
 }
 func (m *ChallengeMessage) getTargetName() []byte {
 	if m.TargetNameLen == 0 {
 		return make([]byte, 0)
 	}
 	offset := m.BaseLen()
+	// محافظت در برابر offset خراب یا کوچک‌تر از BaseLen
+	if m.TargetNameBufferOffset < offset {
+		return make([]byte, 0)
+	}
 	start := m.TargetNameBufferOffset - offset
-	return m.Payload[start : start+uint32(m.TargetNameLen)]
+	end := start + uint32(m.TargetNameLen)
+	// محافظت در برابر end بزرگ‌تر از طول Payload
+	if end > uint32(len(m.Payload)) || start >= uint32(len(m.Payload)) {
+		return make([]byte, 0)
+	}
+	return m.Payload[start:end]
 }
 func (m *ChallengeMessage) getTargetInfoTimestamp(data []byte) []byte {
 	r := bytes.NewReader(data)
