@@ -449,6 +449,10 @@ func (t *TPKT) recvFastPath(s []byte, err error) {
 		return
 	}
 
-	t.fastPathListener.RecvFastPath(t.secFlag, s)
+	if t.fastPathListener != nil {
+		t.fastPathListener.RecvFastPath(t.secFlag, s)
+	} else {
+		glog.Debug("tpkt recvFastPath: no fastPathListener registered, dropping packet")
+	}
 	core.StartReadBytes(t.ctx, 2, t.Conn, t.recvHeader)
 }
