@@ -833,10 +833,20 @@ func (c *Client) sendClientNewLicenseRequest(data []byte) {
 
 	buff := &bytes.Buffer{}
 
-	serverPubKey, _ := sc.CertData.GetPublicKey()
+	serverPubKey, err := sc.CertData.GetPublicKey()
+	if err != nil {
+		glog.Error("get server public key err:", err)
+		return
+	}
+	if serverPubKey == nil {
+		glog.Error("server public key is nil, aborting license request")
+		return
+	}
+
 	ret, err := rsa.EncryptPKCS1v15(rand.Reader, serverPubKey, core.Reverse(preMasterSecret))
 	if err != nil {
-		glog.Error("err:", err)
+		glog.Error("encrypt pre-master secret err:", err)
+		return
 	}
 
 	buff.Write(core.Reverse(ret))
@@ -863,6 +873,7 @@ func (c *Client) sendClientNewLicenseRequest(data []byte) {
 	err = struc.Pack(buff, message)
 	if err != nil {
 		glog.Error("err:", err)
+		return
 	}
 
 	c.sendFlagged(LICENSE_PKT, buff.Bytes())
