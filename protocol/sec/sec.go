@@ -756,6 +756,16 @@ func (c *Client) sendClientRandom() {
 	c.sendFlagged(EXCHANGE_PKT, message.serialize())
 }
 
+func (c *Client) sendInfoPkt() {
+	var secFlag uint16 = INFO_PKT
+	if c.enableEncryption {
+		secFlag |= ENCRYPT
+	}
+
+	glog.Debug("RdpVersion:", c.ClientCoreData().RdpVersion, ":", gcc.RDP_VERSION_5_PLUS)
+	c.sendFlagged(secFlag, c.info.Serialize(c.ClientCoreData().RdpVersion == gcc.RDP_VERSION_5_PLUS))
+}
+
 func (c *Client) recvLicenceInfo(channel string, s []byte) {
 	glog.Debug("sec recvLicenceInfo", hex.EncodeToString(s))
 	r := bytes.NewReader(s)
