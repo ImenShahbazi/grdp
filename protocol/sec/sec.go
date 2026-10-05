@@ -731,10 +731,20 @@ func (c *Client) sendClientRandom() {
 		glog.Warn("Cannot verify server identity")
 	}
 
-	serverPubKey, _ := c.ServerSecurityData().ServerCertificate.CertData.GetPublicKey()
+	serverPubKey, err := c.ServerSecurityData().ServerCertificate.CertData.GetPublicKey()
+	if err != nil {
+		glog.Error("get server public key err:", err)
+		return
+	}
+	if serverPubKey == nil {
+		glog.Error("server public key is nil, aborting client random exchange")
+		return
+	}
+
 	ret, err := rsa.EncryptPKCS1v15(rand.Reader, serverPubKey, core.Reverse(clientRandom))
 	if err != nil {
 		glog.Error("err:", err)
+		return
 	}
 	message := ClientSecurityExchangePDU{}
 	message.EncryptedClientRandom = core.Reverse(ret)
@@ -744,15 +754,6 @@ func (c *Client) sendClientRandom() {
 	glog.Debug("message:", message)
 
 	c.sendFlagged(EXCHANGE_PKT, message.serialize())
-}
-func (c *Client) sendInfoPkt() {
-	var secFlag uint16 = INFO_PKT
-	if c.enableEncryption {
-		secFlag |= ENCRYPT
-	}
-
-	glog.Debug("RdpVersion:", c.ClientCoreData().RdpVersion, ":", gcc.RDP_VERSION_5_PLUS)
-	c.sendFlagged(secFlag, c.info.Serialize(c.ClientCoreData().RdpVersion == gcc.RDP_VERSION_5_PLUS))
 }
 
 func (c *Client) recvLicenceInfo(channel string, s []byte) {
